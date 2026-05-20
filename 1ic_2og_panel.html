@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>11kV Switchgear Digital Twin - Standard Industrial Controls</title>
+    <style>
+        :root {
+            --panel-bg: #2d3238;
+            --door-border: #1e2124;
+            --led-off: #222222;
+            --led-red: #ff3b30;
+            --led-yellow: #ffcc00;
+            --led-blue: #007aff;
+            --led-green: #34c759;
+            --meter-dial: #f8f9fa;
+            
+            --ann-off: #1a1c1e;
+            --ann-border: #454d55;
+            --ann-red: #ff3b30;
+            --ann-green: #00e676;
+            --ann-amber: #ff9100;
+            --ann-yellow: #ffd600;
+            --ann-white: #ffffff;
+        }
+
+        body {
+            background-color: #141619;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #ffffff;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .main-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 25px;
+        }
+
+        .switchgear-lineup {
+            display: flex;
+            gap: 20px;
+            background-color: #0b0c0e;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.8);
+        }
+
+        .fault-simulator-desk {
+            width: 240px;
+            background-color: #22252a;
+            border: 4px solid #3a3f44;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 5px 15px 30px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+        }
+
+        .sim-title {
+            text-align: center;
+            font-size: 13px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            color: #ffcc00;
+            border-bottom: 2px dashed #3a3f44;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+
+        .sim-btn {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px #111;
+            transition: all 0.1s ease;
+            display: block;
+            text-align: center;
+        }
+
+        .sim-btn:active {
+            box-shadow: 0 1px #111;
+            transform: translateY(3px);
+        }
+
+        .btn-fault {
+            background: linear-gradient(135deg, #d32f2f, #b71c1c);
+            color: white;
+            border: 1px solid #7f0000;
+        }
+
+        .btn-reset {
+            background: linear-gradient(135deg, #78909c, #546e7a);
+            color: white;
+            border: 1px solid #37474f;
+            margin-top: 15px;
+        }
+
+        .btn-reset:hover { background: #455a64; }
+
+        
+        .panel-column {
+            width: 380px;
+            background-color: var(--panel-bg);
+            border: 4px solid var(--door-border);
+            display: flex;
+            flex-direction: column;
+            border-radius: 6px;
+        }
+
+        .lv-chamber {
+            height: 660px;
+            border-bottom: 5px double var(--door-border);
+            padding: 15px;
+            position: relative;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-title {
+            text-align: center;
+            font-weight: bold;
+            font-size: 15px;
+            letter-spacing: 1.5px;
+            margin-bottom: 12px;
+            color: #eceff1;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+            padding-bottom: 6px;
+        }
+
+        .indicator-matrix {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .indicator-row {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .indicator-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 8px;
+            font-weight: bold;
+            color: #b0bec5;
+            width: 75px;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .inc-only-box {
+            width: 32px;
+        }
+
+        .led {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background-color: var(--led-off);
+            margin-bottom: 4px;
+            border: 1px solid #000;
+            transition: all 0.2s ease;
+        }
+
+        .led.active-r { background-color: var(--led-red); box-shadow: 0 0 10px var(--led-red); }
+        .led.active-y { background-color: var(--led-yellow); box-shadow: 0 0 10px var(--led-yellow); }
+        .led.active-b { background-color: var(--led-blue); box-shadow: 0 0 10px var(--led-blue); }
+        .led.active-g { background-color: var(--led-green); box-shadow: 0 0 10px var(--led-green); }
+
+        .metering-control-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 0.7fr;
+            gap: 10px;
+            margin-bottom: 12px;
+            background: rgba(0,0,0,0.15);
+            padding: 8px;
+            border-radius: 6px;
+        }
+
+        .meter-container {
+            background: #1e2226;
+            border: 1px solid #454d55;
+            padding: 6px;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .analog-meter {
+            width: 105px;
+            height: 95px;
+            background: var(--meter-dial);
+            border-radius: 4px 4px 40px 40px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #111;
+            color: #111;
+        }
+
+        .analog-meter::before {
+            content: '';
+            position: absolute;
+            top: 18px;
+            left: 10px;
+            width: 81px;
+            height: 81px;
+            border: 2px solid #222;
+            border-radius: 50%;
+            box-sizing: border-box;
+        }
+
+        .tick {
+            position: absolute;
+            bottom: 10px;
+            left: 51px;
+            width: 1.5px;
+            height: 6px;
+            background: #111;
+            transform-origin: bottom center;
+        }
+        .tick-label {
+            position: absolute;
+            top: -12px;
+            left: -10px;
+            width: 20px;
+            text-align: center;
+            font-size: 7px;
+            font-weight: bold;
+        }
+
+        .meter-label-center {
+            position: absolute;
+            bottom: 24px;
+            width: 100%;
+            text-align: center;
+            font-weight: bold;
+            font-size: 11px;
+        }
+
+        .meter-needle {
+            width: 1.5px;
+            height: 72px;
+            background: #d32f2f;
+            position: absolute;
+            bottom: 10px;
+            left: 51px;
+            transform-origin: bottom center;
+            transform: rotate(-55deg);
+            transition: transform 0.45s cubic-bezier(0.25, 0.8, 0.25, 1);
+            z-index: 2;
+        }
+
+        .meter-pivot {
+            width: 10px;
+            height: 10px;
+            background: #111;
+            border-radius: 50%;
+            position: absolute;
+            bottom: 5px;
+            left: 46px;
+            z-index: 3;
+        }
+
+        .selector-label {
+            font-size: 8px;
+            font-weight: bold;
+            color: #90a4ae;
+            margin-top: 6px;
+            margin-bottom: 2px;
+            text-align: center;
+        }
+
+        .switch-facia-wrap {
+            position: relative;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .switch-pos-text {
+            position: absolute;
+            font-size: 7px;
+            font-weight: bold;
+            color: #eceff1;
+        }
+
+        .rotary-switch {
+            width: 24px;
+            height: 24px;
+            background: #111;
+            border: 2px solid #78909c;
+            border-radius: 50%;
+            position: relative;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .rotary-knob {
+            width: 3px;
+            height: 18px;
+            background: #cfd8dc;
+            position: absolute;
+            top: 1px;
+            left: 8px;
+            border-radius: 1px;
+            transform-origin: center 11px;
+            transition: transform 0.2s ease;
+        }
+        .rotary-knob::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 6px;
+            background: #d32f2f;
+            border-radius: 1px 1px 0 0;
+        }
+
+        .tnc-controls-column {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            background: #15181b;
+            border: 1px solid #373e44;
+            padding: 4px;
+            border-radius: 4px;
+            gap: 8px;
+        }
+
+        .tnc-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #1e2226;
+            border: 1px solid #2d3238;
+            padding: 4px 2px;
+            border-radius: 4px;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .tnc-switch-dial {
+            width: 32px;
+            height: 32px;
+            background-color: #050505;
+            border: 2px solid #616161;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .tnc-switch-handle {
+            width: 6px;
+            height: 26px;
+            background-color: #b71c1c;
+            position: absolute;
+            top: 1px;
+            left: 11px;
+            border-radius: 2px;
+            transform-origin: center 13px;
+            transition: transform 0.15s ease;
+        }
+
+        .tnc-zone {
+            position: absolute;
+            width: 12px;
+            height: 100%;
+            cursor: pointer;
+            z-index: 5;
+        }
+        .zone-trip { left: 0; top: 0; }
+        .zone-close { right: 0; top: 0; }
+
+        .emergency-btn {
+            width: 30px;
+            height: 30px;
+            background: radial-gradient(circle, #ff1744 40%, #b71c1c 90%);
+            border: 2px solid #000;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.5);
+        }
+        .emergency-btn:active {
+            transform: scale(0.92);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        /* ADD THIS inside <style> */
+
+        .sld-panel{
+            width:260px;
+            min-height:320px;
+            background:#1c1f24;
+            border:4px solid #3a3f44;
+            border-radius:8px;
+            padding:15px;
+            box-shadow:5px 15px 30px rgba(0,0,0,0.5);
+        }
+
+        .sld-title{
+            text-align:center;
+            font-size:14px;
+            font-weight:bold;
+            color:#00e5ff;
+            margin-bottom:15px;
+            border-bottom:2px dashed #3a3f44;
+            padding-bottom:8px;
+        }
+
+        .relays-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .relay-block {
+            background-color: #1e2226;
+            border: 1px solid #546e7a;
+            height: 52px;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .relay-block.triggered-86 {
+            background-color: #7f0000;
+            border-color: #ff3b30;
+            color: #fff;
+            animation: pulse-red-relay 0.6s infinite alternate;
+        }
+
+        @keyframes pulse-red-relay {
+            from { box-shadow: inset 0 0 4px #ff3b30; }
+            to { box-shadow: inset 0 0 20px #ff3b30; }
+        }
+
+        .relay-symbol {
+            width: 24px;
+            height: 16px;
+            border: 1px solid #ffb74d;
+            position: relative;
+            margin-bottom: 2px;
+            background: rgba(255,183,77,0.05);
+        }
+        .relay-symbol::before {
+            content: 'I >';
+            position: absolute;
+            font-size: 8px;
+            top: 1px;
+            left: 3px;
+            color: #ffb74d;
+        }
+
+        .annunciator-panel {
+            background-color: #111315;
+            border: 3px solid #1e2124;
+            padding: 6px;
+            border-radius: 4px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+            box-shadow: inset 0 4px 10px rgba(0,0,0,0.9);
+            margin-top: 48px;
+        }
+
+        .annunciator-window {
+            height: 38px;
+            background-color: var(--ann-off);
+            border: 1px solid var(--ann-border);
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 8px;
+            font-weight: 800;
+            color: #3b424a;
+            padding: 2px;
+            box-sizing: border-box;
+            line-height: 1.1;
+            letter-spacing: 0.2px;
+            transition: all 0.15s ease;
+            text-transform: uppercase;
+        }
+
+        .annunciator-window.active-cb-on { background-color: #4a0d0d; border-color: var(--ann-red); color: var(--ann-red); text-shadow: 0 0 6px rgba(255,59,48,0.8); }
+        .annunciator-window.active-cb-off { background-color: #0b3a1a; border-color: var(--ann-green); color: var(--ann-green); text-shadow: 0 0 6px rgba(0,230,118,0.8); }
+        .annunciator-window.active-spr { background-color: #423d0c; border-color: var(--ann-yellow); color: var(--ann-yellow); text-shadow: 0 0 6px rgba(255,214,0,0.8); }
+        .annunciator-window.active-tch { background-color: #333a42; border-color: #cfd8dc; color: var(--ann-white); text-shadow: 0 0 6px rgba(255,255,255,0.8); }
+        .annunciator-window.alarm-active { background-color: #532b00; border-color: var(--ann-amber); color: var(--ann-amber); text-shadow: 0 0 8px var(--ann-amber); animation: flash-annunciator 0.5s infinite alternate; }
+
+        @keyframes flash-annunciator {
+            from { background-color: #241300; }
+            to { background-color: #532b00; }
+        }
+
+        .breaker-chamber {
+            height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(180deg, #24282c 0%, #1e2124 100%);
+        }
+
+        .viewing-window {
+            width: 120px;
+            height: 36px;
+            background-color: #0c0d0e;
+            border: 3px solid #111;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .panel-label {
+            margin-top: 10px;
+            font-size: 13px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+		
+		/* Right Column: SCADA & Simulator Control Desk */
+        .scada-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .fault-simulator-desk {
+            background: #1e1e24;
+            border: 2px solid #3e3e4a;
+            border-radius: 6px;
+            padding: 16px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+        }
+
+        .sim-title {
+            font-size: 13px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            color: #ff8a80;
+            border-bottom: 1px dashed #3e3e4a;
+            padding-bottom: 6px;
+        }
+
+        .sim-btn {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            border: none;
+            font-weight: bold;
+            font-size: 11px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: background 0.2s;
+        }
+
+        .btn-fault { background: #b71c1c; color: #fff; border: 1px solid #d32f2f; }
+        .btn-fault:hover { background: #c62828; }
+        .btn-reset { background: #37474f; color: #81c784; border: 1px solid #455a64; margin-top: 6px; margin-bottom: 0; }
+        .btn-reset:hover { background: #455a64; }
+
+        .sld-container {
+            background: #111318;
+            border: 2px solid #282c37;
+            border-radius: 6px;
+            padding: 16px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            flex-grow: 1;
+        }
+
+        .sld-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #64b5f6;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .sld-svg-frame {
+            width: 100%;
+            height: auto;
+            background: #090a0d;
+            border: 1px solid #1f232b;
+            border-radius: 4px;
+        }
+
+        /* SVG Dynamic Mimic Styles */
+        .sld-line { stroke: #455a64; stroke-width: 3; fill: none; transition: stroke 0.3s ease; }
+        .sld-line.live { stroke: #ffca28; }
+        .sld-node { fill: #455a64; transition: fill 0.3s ease; }
+        .sld-node.live { fill: #ffca28; }
+
+        .sld-cb-box { fill: #263238; stroke: #b0bec5; stroke-width: 2; cursor: pointer; transition: all 0.3s ease; }
+        .sld-cb-box.open { fill: #1b5e20; stroke: #4caf50; }
+        .sld-cb-box.closed { fill: #b71c1c; stroke: #f44336; }
+        .sld-cb-box.tripped { fill: #ff9800; stroke: #4caf50; }
+
+        .sld-text { font-family: monospace; font-size: 36px; fill: #b0bec5; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+
+    <div class="switchgear-lineup">
+        <div class="panel-column" id="panel-inc">
+            <div class="lv-chamber">
+                <div class="panel-title">INCOMING 11KV</div>
+                
+                <div class="indicator-matrix">
+                    <div class="indicator-row">
+                        <div class="indicator-box"><div class="led" id="inc-l1"></div>L1 (R)</div>
+                        <div class="indicator-box"><div class="led" id="inc-l2"></div>L2 (Y)</div>
+                        <div class="indicator-box"><div class="led" id="inc-l3"></div>L3 (B)</div>
+                        <div class="indicator-box"><div class="led" id="inc-h1"></div>H1<br>CB CLOSED</div>
+                        <div class="indicator-box"><div class="led active-g" id="inc-h2"></div>H2<br>CB OPEN</div>
+                        <div class="indicator-box"><div class="led" id="inc-h3"></div>H3<br>AUTO TRIP</div>
+                        <div class="indicator-box"><div class="led active-b" id="inc-h4"></div>H4<br>TRIP CKTY HLT</div>
+                    </div>
+                </div>
+
+                <div class="metering-control-grid">
+                    <div class="meter-container">
+                        <div class="analog-meter">
+                            <div class="tick" style="transform: rotate(-55deg) translateY(-64px);"><div class="tick-label">0</div></div>
+                            <div class="tick" style="transform: rotate(-18deg) translateY(-64px);"><div class="tick-label">200</div></div>
+                            <div class="tick" style="transform: rotate(18deg) translateY(-64px);"><div class="tick-label">400</div></div>
+                            <div class="tick" style="transform: rotate(55deg) translateY(-64px);"><div class="tick-label">600</div></div>
+                            <div class="meter-needle" id="inc-ammeter-needle"></div>
+                            <div class="meter-label-center">A</div>
+                            <div class="meter-pivot"></div>
+                        </div>
+                        <div class="selector-label">ASS SWITCH<br>(B-OFF-R)</div>
+                        <div class="switch-facia-wrap">
+                            <div class="switch-pos-text" style="top:2px; left:23px;">OFF</div>
+                            <div class="switch-pos-text" style="top:20px; left:2px;">B</div>
+                            <div class="switch-pos-text" style="top:20px; right:2px;">R</div>
+                            <div class="rotary-switch" onclick="rotateASS('inc')"><div class="rotary-knob" id="inc-ass-knob" style="transform: rotate(0deg);"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="meter-container">
+                        <div class="analog-meter">
+                            <div class="tick" style="transform: rotate(-55deg) translateY(-64px);"><div class="tick-label">0</div></div>
+                            <div class="tick" style="transform: rotate(-18deg) translateY(-64px);"><div class="tick-label">5</div></div>
+                            <div class="tick" style="transform: rotate(18deg) translateY(-64px);"><div class="tick-label">10</div></div>
+                            <div class="tick" style="transform: rotate(55deg) translateY(-64px);"><div class="tick-label">15</div></div>
+                            <div class="meter-needle" id="inc-voltmeter-needle"></div>
+                            <div class="meter-label-center">kV</div>
+                            <div class="meter-pivot"></div>
+                        </div>
+                        <div class="selector-label">VSS SWITCH<br>(BR-OFF-RY-YB)</div>
+                        <div class="switch-facia-wrap">
+                            <div class="switch-pos-text" style="top:1px; left:20px;">OFF</div>
+                            <div class="switch-pos-text" style="top:14px; left:1px;">BR</div>
+                            <div class="switch-pos-text" style="top:14px; right:1px;">RY</div>
+                            <div class="switch-pos-text" style="bottom:1px; left:22px;">YB</div>
+                            <div class="rotary-switch" onclick="rotateVSS('inc')"><div class="rotary-knob" id="inc-vss-knob" style="transform: rotate(0deg);"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="tnc-controls-column">
+                        <div class="tnc-block">
+                            <div class="selector-label" style="margin-top:0;">TNC CONTROL<br>(T-N-C)</div>
+                            <div class="tnc-switch-dial" id="inc-tnc-dial">
+                                <div class="tnc-zone zone-trip" onmousedown="engageTNC('inc', 'T')" onmouseup="releaseTNC('inc')" onmouseleave="releaseTNC('inc')"></div>
+                                <div class="tnc-zone zone-close" onmousedown="engageTNC('inc', 'C')" onmouseup="releaseTNC('inc')" onmouseleave="releaseTNC('inc')"></div>
+                                <div class="switch-pos-text" style="top:10px; left:3px; color:#ef5350;">T</div>
+                                <div class="switch-pos-text" style="top:2px; left:13px; color:#fff;">N</div>
+                                <div class="switch-pos-text" style="top:10px; right:3px; color:#81c784;">C</div>
+                                <div class="tnc-switch-handle" id="inc-tnc-handle"></div>
+                            </div>
+                        </div>
+                        <div class="tnc-block">
+                            <div class="selector-label" style="margin-top:0;">SELECT SW<br>(REM/MAN)</div>
+                            <div class="tnc-switch-dial" onclick="toggleTncSelector('inc')">
+                                <div class="switch-pos-text" style="top:10px; left:2px; font-size:6px;">R</div>
+                                <div class="switch-pos-text" style="top:10px; right:2px; font-size:6px;">M</div>
+                                <div class="tnc-switch-handle" id="inc-sel-handle" style="transform: rotate(30deg); background-color:#78909c;"></div>
+                            </div>
+                        </div>
+                        <div class="tnc-block" style="flex:0.5;">
+                            <div class="selector-label" style="margin-top:0; color:#ef5350;">EMERGENCY</div>
+                            <div class="emergency-btn" onclick="executeEmergencyTrip('inc')"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="relays-row">
+                    <div class="relay-block"><div class="relay-symbol"></div><div>51/51N</div></div>
+                    <div class="relay-block" id="inc-relay-86"><div style="color:#ef5350;">[86]</div>MASTER</div>
+                    <div class="relay-block"><div style="color:#64b5f6;">[74]</div>TCH</div>
+                </div>
+
+                <div class="annunciator-panel" id="inc-annunciator">
+                    <div class="annunciator-window" id="inc-ann-cbon">CB ON</div>
+                    <div class="annunciator-window" id="inc-ann-cboff">CB OFF</div>
+                    <div class="annunciator-window" id="inc-ann-spr">SPR CHG</div>
+                    <div class="annunciator-window" id="inc-ann-tch">TCH HEALTHY</div>
+                    <div class="annunciator-window" id="inc-ann-oc">51 OVER CURRENT</div>
+                    <div class="annunciator-window" id="inc-ann-ef">51N EARTH FAULT</div>
+                </div>
+            </div>
+            <div class="breaker-chamber">
+                <div class="viewing-window" id="inc-window" style="color: #34c759;">OPEN</div>
+                <div class="panel-label">INCOMING</div>
+            </div>
+        </div>
+
+        <div class="panel-column" id="panel-og1">
+            <div class="lv-chamber">
+                <div class="panel-title">OUTGOING-1</div>
+                
+                <div class="indicator-matrix">
+                    <div class="indicator-row">
+                        <div class="indicator-box"><div class="led" id="og1-h1"></div>H1<br>CB CLOSED</div>
+                        <div class="indicator-box"><div class="led active-g" id="og1-h2"></div>H2<br>CB OPEN</div>
+                        <div class="indicator-box"><div class="led" id="og1-h3"></div>H3<br>AUTO TRIP</div>
+                        <div class="indicator-box"><div class="led active-b" id="og1-h4"></div>H4<br>TRIP CKTY HLT</div>
+                    </div>
+                </div>
+
+                <div class="metering-control-grid">
+                    <div class="meter-container">
+                        <div class="analog-meter">
+                            <div class="tick" style="transform: rotate(-55deg) translateY(-64px);"><div class="tick-label">0</div></div>
+                            <div class="tick" style="transform: rotate(-18deg) translateY(-64px);"><div class="tick-label">200</div></div>
+                            <div class="tick" style="transform: rotate(18deg) translateY(-64px);"><div class="tick-label">400</div></div>
+                            <div class="tick" style="transform: rotate(55deg) translateY(-64px);"><div class="tick-label">600</div></div>
+                            <div class="meter-needle" id="og1-ammeter-needle"></div>
+                            <div class="meter-label-center">A</div>
+                            <div class="meter-pivot"></div>
+                        </div>
+                        <div class="selector-label">ASS SWITCH<br>(B-OFF-R)</div>
+                        <div class="switch-facia-wrap">
+                            <div class="switch-pos-text" style="top:2px; left:23px;">OFF</div>
+                            <div class="switch-pos-text" style="top:20px; left:2px;">B</div>
+                            <div class="switch-pos-text" style="top:20px; right:2px;">R</div>
+                            <div class="rotary-switch" onclick="rotateASS('og1')"><div class="rotary-knob" id="og1-ass-knob" style="transform: rotate(0deg);"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="meter-container">
+                        <div class="analog-meter">
+                            <div class="tick" style="transform: rotate(-55deg) translateY(-64px);"><div class="tick-label">0</div></div>
+                            <div class="tick" style="transform: rotate(-18deg) translateY(-64px);"><div class="tick-label">5</div></div>
+                            <div class="tick" style="transform: rotate(18deg) translateY(-64px);"><div class="tick-label">10</div></div>
+                            <div class="tick" style="transform: rotate(55deg) translateY(-64px);"><div class="tick-label">15</div></div>
+                            <div class="meter-needle" id="og1-voltmeter-needle"></div>
+                            <div class="meter-label-center">kV</div>
+                            <div class="meter-pivot"></div>
+                        </div>
+                        <div class="selector-label">VSS SWITCH<br>(BR-OFF-RY-YB)</div>
+                        <div class="switch-facia-wrap">
+                            <div class="switch-pos-text" style="top:1px; left:20px;">OFF</div>
+                            <div class="switch-pos-text" style="top:14px; left:1px;">BR</div>
+                            <div class="switch-pos-text" style="top:14px; right:1px;">RY</div>
+                            <div class="switch-pos-text" style="bottom:1px; left:22px;">YB</div>
+                            <div class="rotary-switch" onclick="rotateVSS('og1')"><div class="rotary-knob" id="og1-vss-knob" style="transform: rotate(0deg);"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="tnc-controls-column">
+                        <div class="tnc-block">
+                            <div class="selector-label" style="margin-top:0;">TNC CONTROL<br>(T-N-C)</div>
+                            <div class="tnc-switch-dial">
+                                <div class="tnc-zone zone-trip" onmousedown="engageTNC('og1', 'T')" onmouseup="releaseTNC('og1')" onmouseleave="releaseTNC('og1')"></div>
+                                <div class="tnc-zone zone-close" onmousedown="engageTNC('og1', 'C')" onmouseup="releaseTNC('og1')" onmouseleave="releaseTNC('og1')"></div>
+                                <div class="switch-pos-text" style="top:10px; left:3px; color:#ef5350;">T</div>
+                                <div class="switch-pos-text" style="top:2px; left:13px; color:#fff;">N</div>
+                                <div class="switch-pos-text" style="top:10px; right:3px; color:#81c784;">C</div>
+                                <div class="tnc-switch-handle" id="og1-tnc-handle"></div>
+                            </div>
+                        </div>
+                        <div class="tnc-block">
+                            <div class="selector-label" style="margin-top:0;">SELECT SW<br>(REM/MAN)</div>
+                            <div class="tnc-switch-dial" onclick="toggleTncSelector('og1')">
+                                <div class="switch-pos-text" style="top:10px; left:2px; font-size:6px;">R</div>
+                                <div class="switch-pos-text" style="top:10px; right:2px; font-size:6px;">M</div>
+                                <div class="tnc-switch-handle" id="og1-sel-handle" style="transform: rotate(30deg); background-color:#78909c;"></div>
+                            </div>
+                        </div>
+                        <div class="tnc-block" style="flex:0.5;">
+                            <div class="selector-label" style="margin-top:0; color:#ef5350;">EMERGENCY</div>
+                            <div class="emergency-btn" onclick="executeEmergencyTrip('og1')"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="relays-row">
+                    <div class="relay-block"><div class="relay-symbol"></div><div>51/51N</div></div>
+                    <div class="relay-block" id="og1-relay-86"><div style="color:#ef5350;">[86]</div>MASTER</div>
+                    <div class="relay-block"><div style="color:#64b5f6;">[74]</div>TCH</div>
+                </div>
+
+                <div class="annunciator-panel" id="og1-annunciator">
+                    <div class="annunciator-window" id="og1-ann-cbon">CB ON</div>
+                    <div class="annunciator-window" id="og1-ann-cboff">CB OFF</div>
+                    <div class="annunciator-window" id="og1-ann-spr">SPR CHG</div>
+                    <div class="annunciator-window" id="og1-ann-tch">TCH HEALTHY</div>
+                    <div class="annunciator-window" id="og1-ann-oc">51 OVER CURRENT</div>
+                    <div class="annunciator-window" id="og1-ann-ef">51N EARTH FAULT</div>
+                </div>
+            </div>
+            <div class="breaker-chamber">
+                <div class="viewing-window" id="og1-window" style="color: #34c759;">OPEN</div>
+                <div class="panel-label">OUTGOING-1</div>
+            </div>
+        </div>
+
+        <div class="panel-column" id="panel-og2">
+            <div class="lv-chamber">
+                <div class="panel-title">OUTGOING-2</div>
+                
+                <div class="indicator-matrix">
+                    <div class="indicator-row">
+                        <div class="indicator-box"><div class="led" id="og2-h1"></div>H1<br>CB CLOSED</div>
+                        <div class="indicator-box"><div class="led active-g" id="og2-h2"></div>H2<br>CB OPEN</div>
+                        <div class="indicator-box"><div class="led" id="og2-h3"></div>H3<br>AUTO TRIP</div>
+                        <div class="indicator-box"><div class="led active-b" id="og2-h4"></div>H4<br>TRIP CKTY HLT</div>
+                    </div>
+                </div>
+
+                <div class="metering-control-grid">
+                    <div class="meter-container">
+                        <div class="analog-meter">
+                            <div class="tick" style="transform: rotate(-55deg) translateY(-64px);"><div class="tick-label">0</div></div>
+                            <div class="tick" style="transform: rotate(-18deg) translateY(-64px);"><div class="tick-label">200</div></div>
+                            <div class="tick" style="transform: rotate(18deg) translateY(-64px);"><div class="tick-label">400</div></div>
+                            <div class="tick" style="transform: rotate(55deg) translateY(-64px);"><div class="tick-label">600</div></div>
+                            <div class="meter-needle" id="og2-ammeter-needle"></div>
+                            <div class="meter-label-center">A</div>
+                            <div class="meter-pivot"></div>
+                        </div>
+                        <div class="selector-label">ASS SWITCH<br>(B-OFF-R)</div>
+                        <div class="switch-facia-wrap">
+                            <div class="switch-pos-text" style="top:2px; left:23px;">OFF</div>
+                            <div class="switch-pos-text" style="top:20px; left:2px;">B</div>
+                            <div class="switch-pos-text" style="top:20px; right:2px;">R</div>
+                            <div class="rotary-switch" onclick="rotateASS('og2')"><div class="rotary-knob" id="og2-ass-knob" style="transform: rotate(0deg);"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="meter-container">
+                        <div class="analog-meter">
+                            <div class="tick" style="transform: rotate(-55deg) translateY(-64px);"><div class="tick-label">0</div></div>
+                            <div class="tick" style="transform: rotate(-18deg) translateY(-64px);"><div class="tick-label">5</div></div>
+                            <div class="tick" style="transform: rotate(18deg) translateY(-64px);"><div class="tick-label">10</div></div>
+                            <div class="tick" style="transform: rotate(55deg) translateY(-64px);"><div class="tick-label">15</div></div>
+                            <div class="meter-needle" id="og2-voltmeter-needle"></div>
+                            <div class="meter-label-center">kV</div>
+                            <div class="meter-pivot"></div>
+                        </div>
+                        <div class="selector-label">VSS SWITCH<br>(BR-OFF-RY-YB)</div>
+                        <div class="switch-facia-wrap">
+                            <div class="switch-pos-text" style="top:1px; left:20px;">OFF</div>
+                            <div class="switch-pos-text" style="top:14px; left:1px;">BR</div>
+                            <div class="switch-pos-text" style="top:14px; right:1px;">RY</div>
+                            <div class="switch-pos-text" style="bottom:1px; left:22px;">YB</div>
+                            <div class="rotary-switch" onclick="rotateVSS('og2')"><div class="rotary-knob" id="og2-vss-knob" style="transform: rotate(0deg);"></div></div>
+                        </div>
+                    </div>
+
+                    <div class="tnc-controls-column">
+                        <div class="tnc-block">
+                            <div class="selector-label" style="margin-top:0;">TNC CONTROL<br>(T-N-C)</div>
+                            <div class="tnc-switch-dial">
+                                <div class="tnc-zone zone-trip" onmousedown="engageTNC('og2', 'T')" onmouseup="releaseTNC('og2')" onmouseleave="releaseTNC('og2')"></div>
+                                <div class="tnc-zone zone-close" onmousedown="engageTNC('og2', 'C')" onmouseup="releaseTNC('og2')" onmouseleave="releaseTNC('og2')"></div>
+                                <div class="switch-pos-text" style="top:10px; left:3px; color:#ef5350;">T</div>
+                                <div class="switch-pos-text" style="top:2px; left:13px; color:#fff;">N</div>
+                                <div class="switch-pos-text" style="top:10px; right:3px; color:#81c784;">C</div>
+                                <div class="tnc-switch-handle" id="og2-tnc-handle"></div>
+                            </div>
+                        </div>
+                        <div class="tnc-block">
+                            <div class="selector-label" style="margin-top:0;">SELECT SW<br>(REM/MAN)</div>
+                            <div class="tnc-switch-dial" onclick="toggleTncSelector('og2')">
+                                <div class="switch-pos-text" style="top:10px; left:2px; font-size:6px;">R</div>
+                                <div class="switch-pos-text" style="top:10px; right:2px; font-size:6px;">M</div>
+                                <div class="tnc-switch-handle" id="og2-sel-handle" style="transform: rotate(30deg); background-color:#78909c;"></div>
+                            </div>
+                        </div>
+                        <div class="tnc-block" style="flex:0.5;">
+                            <div class="selector-label" style="margin-top:0; color:#ef5350;">EMERGENCY</div>
+                            <div class="emergency-btn" onclick="executeEmergencyTrip('og2')"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="relays-row">
+                    <div class="relay-block"><div class="relay-symbol"></div><div>51/51N</div></div>
+                    <div class="relay-block" id="og2-relay-86"><div style="color:#ef5350;">[86]</div>MASTER</div>
+                    <div class="relay-block"><div style="color:#64b5f6;">[74]</div>TCH</div>
+                </div>
+
+                <div class="annunciator-panel" id="og2-annunciator">
+                    <div class="annunciator-window" id="og2-ann-cbon">CB ON</div>
+                    <div class="annunciator-window" id="og2-ann-cboff">CB OFF</div>
+                    <div class="annunciator-window" id="og2-ann-spr">SPR CHG</div>
+                    <div class="annunciator-window" id="og2-ann-tch">TCH HEALTHY</div>
+                    <div class="annunciator-window" id="og2-ann-oc">51 OVER CURRENT</div>
+                    <div class="annunciator-window" id="og2-ann-ef">51N EARTH FAULT</div>
+                </div>
+            </div>
+            <div class="breaker-chamber">
+                <div class="viewing-window" id="og2-window" style="color: #34c759;">OPEN</div>
+                <div class="panel-label">OUTGOING-2</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="fault-simulator-desk">
+        <div class="sim-title">💥 FAULT SIMULATOR</div>
+        <button class="sim-btn btn-fault" onclick="injectFault('og1')">Fault Outgoing 1</button>
+        <button class="sim-btn btn-fault" onclick="injectFault('og2')">Fault Outgoing 2</button>
+        <button class="sim-btn btn-fault" onclick="injectFault('inc')">Incomer Grid Fault</button>
+        <button class="sim-btn btn-reset" onclick="resetMasterLockout()">Reset [86] Lockout</button>
+
+
+
+
+<!-- Single Line Diagram (SLD) Section -->
+<div class="sld-container">
+    <div class="sld-title">⚡ SCADA Mimic Diagram</div>
+
+    <svg class="sld-svg-frame" viewBox="0 0 600 700">
+
+        <!-- Grid Inflow Feeder -->
+        <path id="sld-line-grid" class="sld-line" d="M 300,20 L 300,100" />
+        <circle id="sld-node-grid" class="sld-node" cx="300" cy="20" r="7" />
+        <text x="325" y="28" class="sld-text" fill="#64b5f6">11kV SOURCE</text>
+
+        <!-- Incomer Breaker -->
+        <rect id="sld-cb-inc" class="sld-cb-box open"
+              x="275" y="100" width="50" height="50" rx="4"
+              onclick="handleSldCbClick('inc')" />
+        <text id="sld-txt-inc" x="340" y="122" class="sld-text">
+            CB
+        </text>
+        <text id="sld-txt-inc" x="340" y="162" class="sld-text">
+            I/C
+        </text>
+
+        <!-- Vertical Line to Bus -->
+        <path id="sld-line-to-bus" class="sld-line"
+              d="M 300,150 L 300,260" />
+
+        <!-- Main Busbar -->
+        <path id="sld-line-busbar" class="sld-line"
+              d="M 100,260 L 500,260"
+              style="stroke-width: 8;" />
+
+        <text x="165" y="245"
+              class="sld-text"
+              fill="#ffca28">
+            BUSBAR
+        </text>
+
+        <!-- OG1 -->
+        <path id="sld-line-og1-top" class="sld-line"
+              d="M 180,260 L 180,360" />
+
+        <rect id="sld-cb-og1"
+              class="sld-cb-box open"
+              x="155" y="360"
+              width="50"
+              height="50"
+              rx="4"
+              onclick="handleSldCbClick('og1')" />
+
+        <text id="sld-txt-og1"
+              x="70"
+              y="392"
+              class="sld-text">
+            CB
+        </text>
+        <text id="sld-txt-og1"
+              x="70"
+              y="432"
+              class="sld-text">
+            O/G-1
+        </text>
+
+        <path id="sld-line-og1-bot"
+              class="sld-line"
+              d="M 180,410 L 180,560" />
+
+        <circle id="sld-node-og1"
+                class="sld-node"
+                cx="180"
+                cy="560"
+                r="6" />
+
+        <text x="110"
+              y="590"
+              class="sld-text">
+            O/G-1
+        </text>
+
+        <!-- OG2 -->
+        <path id="sld-line-og2-top"
+              class="sld-line"
+              d="M 420,260 L 420,360" />
+
+        <rect id="sld-cb-og2"
+              class="sld-cb-box open"
+              x="395"
+              y="360"
+              width="50"
+              height="50"
+              rx="4"
+              onclick="handleSldCbClick('og2')" />
+
+        <text id="sld-txt-og2"
+              x="465"
+              y="392"
+              class="sld-text">
+            CB
+        </text>
+        <text id="sld-txt-og2"
+              x="465"
+              y="432"
+              class="sld-text">
+            O/G-2
+        </text>
+
+        <path id="sld-line-og2-bot"
+              class="sld-line"
+              d="M 420,410 L 420,560" />
+
+        <circle id="sld-node-og2"
+                class="sld-node"
+                cx="420"
+                cy="560"
+                r="6" />
+
+        <text x="350"
+              y="590"
+              class="sld-text">
+            O/G-2
+        </text>
+
+    </svg>
+</div>
+
+
+
+
+
+    </div>
+
+
+
+
+
+</div>
+
+<script>
+    let busbarLive = false;
+    let lockout86Active = false; 
+    let gridLineDead = false;
+
+    const panels = {
+        inc: { state: 0, ass: 0, vss: 0, faulted: false, remoteMode: false },
+        og1: { state: 0, ass: 0, vss: 0, faulted: false, remoteMode: false },
+        og2: { state: 0, ass: 0, vss: 0, faulted: false, remoteMode: false }
+    };
+
+    const assRotations = { 0: 0, 1: 45, 2: -45 }; 
+    const vssRotations = { 0: 0, 1: 45, 2: 180, 3: -45 };
+
+    function updateGridLiveLEDs() {
+        const l1 = document.getElementById('inc-l1');
+        const l2 = document.getElementById('inc-l2');
+        const l3 = document.getElementById('inc-l3');
+        if (gridLineDead) {
+            l1.className = "led"; l2.className = "led"; l3.className = "led";
+        } else {
+            l1.className = "led active-r"; l2.className = "led active-y"; l3.className = "led active-b";
+        }
+    }
+
+    function updateAnnunciatorWindows(pId) {
+        const p = panels[pId];
+        document.getElementById(`${pId}-ann-cbon`).className = p.state === 1 ? "annunciator-window active-cb-on" : "annunciator-window";
+        document.getElementById(`${pId}-ann-cboff`).className = p.state !== 1 ? "annunciator-window active-cb-off" : "annunciator-window";
+        document.getElementById(`${pId}-ann-spr`).className = (lockout86Active && p.faulted) ? "annunciator-window" : "annunciator-window active-spr";
+        document.getElementById(`${pId}-ann-tch`).className = (pId === 'inc' && gridLineDead) ? "annunciator-window" : "annunciator-window active-tch";
+        
+        const ocWin = document.getElementById(`${pId}-ann-oc`);
+        const efWin = document.getElementById(`${pId}-ann-ef`);
+        if (ocWin && efWin) {
+            ocWin.className = p.faulted ? "annunciator-window alarm-active" : "annunciator-window";
+            efWin.className = p.faulted ? "annunciator-window alarm-active" : "annunciator-window";
+        }
+    }
+
+    function updateAllAnnunciators() {
+        updateAnnunciatorWindows('inc'); updateAnnunciatorWindows('og1'); updateAnnunciatorWindows('og2');
+    }
+
+    function engageTNC(pId, direction) {
+        const p = panels[pId];
+
+        // REMOTE ELECTRICAL INTERLOCK INTERCEPT
+        if (p.remoteMode) {
+            alert(`🔒 CONTROL INTERLOCK: Panel ${pId.toUpperCase()} is in REMOTE mode. Local TNC operations are hard-isolated!`);
+            return;
+        }
+
+        const handle = document.getElementById(`${pId}-tnc-handle`);
+        
+        if (direction === 'T') {
+            handle.style.transform = "rotate(-45deg)";
+            executeTrippingSequence(pId);
+        } else if (direction === 'C') {
+            handle.style.transform = "rotate(45deg)";
+            executeClosingSequence(pId);
+        }
+    }
+
+    function releaseTNC(pId) {
+        document.getElementById(`${pId}-tnc-handle`).style.transform = "rotate(0deg)";
+    }
+
+    function toggleTncSelector(pId) {
+        const p = panels[pId];
+        p.remoteMode = !p.remoteMode;
+        document.getElementById(`${pId}-sel-handle`).style.transform = p.remoteMode ? "rotate(-30deg)" : "rotate(30deg)";
+		updateSldGraphics();
+    }
+
+    function executeClosingSequence(pId) {
+        const p = panels[pId];
+        if (lockout86Active) {
+            alert("⚠️ TRIP INTERLOCK ACTIVE: Clear and Reset the Master Lockout [86] relay first.");
+            return;
+        }
+        if (p.state === 1) return;
+
+        p.state = 1;
+        if (pId === 'inc' && !gridLineDead) busbarLive = true;
+        
+        syncBreakerHardwareVisuals(pId);
+    }
+
+    function executeTrippingSequence(pId) {
+        const p = panels[pId];
+        if (p.state !== 1) return;
+
+        p.state = 0;
+        if (pId === 'inc') busbarLive = false;
+
+        syncBreakerHardwareVisuals(pId);
+    }
+
+    function executeEmergencyTrip(pId) {
+        const p = panels[pId];
+        if (p.state !== 1) return;
+        
+        p.state = 0;
+        if (pId === 'inc') busbarLive = false;
+        
+        syncBreakerHardwareVisuals(pId);
+        alert(`🚨 EMERGENCY MECHANICAL TRIP: Panel ${pId.toUpperCase()} forced open.`);
+    }
+	
+	function recalculateBusbarPower() {
+        if (panels.inc.state === 1 && !gridLineDead) {
+            busbarLive = true;
+        } else {
+            busbarLive = false;
+        }
+    }
+
+    function syncBreakerHardwareVisuals(pId) {
+        const p = panels[pId];
+        const h1 = document.getElementById(`${pId}-h1`);
+        const h2 = document.getElementById(`${pId}-h2`);
+        const h3 = document.getElementById(`${pId}-h3`);
+        const h4 = document.getElementById(`${pId}-h4`);
+        const win = document.getElementById(`${pId}-window`);
+
+        if (p.state === 1) {
+            h1.className = "led active-r"; h2.className = "led"; h3.className = "led";
+            win.textContent = "CLOSED"; win.style.color = "#ff3b30";
+        } else if (p.state === 2) {
+            h1.className = "led"; h2.className = "led"; h3.className = "led active-y";
+            win.textContent = "TRIPPED"; win.style.color = "#ffcc00";
+        } else {
+            h1.className = "led"; h2.className = "led active-g"; h3.className = "led";
+            win.textContent = "OPEN"; win.style.color = "#34c759";
+        }
+
+        h4.className = (pId === 'inc' && gridLineDead) ? "led" : "led active-b";
+
+        syncSLD();
+        updateAllMeters();
+        updateAllAnnunciators();
+		updateSldGraphics();
+    }
+
+    function injectFault(pId) {
+        const p = panels[pId];
+        if (pId !== 'inc' && p.state !== 1) return;
+
+        lockout86Active = true;
+        p.faulted = true;
+        p.state = 2;
+
+        document.getElementById(`${pId}-relay-86`).classList.add('triggered-86');
+
+        if (pId === 'inc') {
+            gridLineDead = true;
+            busbarLive = false;
+            updateGridLiveLEDs();
+        }
+
+        syncBreakerHardwareVisuals(pId);
+    }
+
+    function resetMasterLockout() {
+        lockout86Active = false;
+        gridLineDead = false;
+        busbarLive = (panels.inc.state === 1);
+        
+        updateGridLiveLEDs();
+        for (let pId in panels) {
+            panels[pId].faulted = false;
+            document.getElementById(`${pId}-relay-86`).classList.remove('triggered-86');
+            syncBreakerHardwareVisuals(pId);
+        }
+    }
+
+    function rotateASS(pId) {
+        panels[pId].ass = (panels[pId].ass + 1) % 3;
+        document.getElementById(`${pId}-ass-knob`).style.transform = `rotate(${assRotations[panels[pId].ass]}deg)`;
+        updatePanelMeters(pId);
+    }
+
+    function rotateVSS(pId) {
+        panels[pId].vss = (panels[pId].vss + 1) % 4;
+        document.getElementById(`${pId}-vss-knob`).style.transform = `rotate(${vssRotations[panels[pId].vss]}deg)`;
+        updatePanelMeters(pId);
+    }
+
+    function updatePanelMeters(pId) {
+        const p = panels[pId];
+        const aNeedle = document.getElementById(`${pId}-ammeter-needle`);
+        const vNeedle = document.getElementById(`${pId}-voltmeter-needle`);
+
+        let hasVoltage = (pId === 'inc') ? !gridLineDead : (busbarLive && p.state === 1 && !gridLineDead);
+
+        if (!hasVoltage || p.vss === 0) {
+            vNeedle.style.transform = "rotate(-55deg)";
+        } else {
+            vNeedle.style.transform = `rotate(${-55 + (11.00 * 7.33)}deg)`;
+        }
+
+        let currentDraw = 0;
+        let og1Current = (panels.og1.state === 1 && busbarLive && panels.og1.ass !== 0) ? 150 : 0;
+        let og2Current = (panels.og2.state === 1 && busbarLive && panels.og2.ass !== 0) ? 200 : 0;
+
+        if (pId === 'inc') {
+            if (panels.inc.state === 1 && panels.inc.ass !== 0) currentDraw = og1Current + og2Current;
+        } else {
+            currentDraw = (pId === 'og1') ? og1Current : og2Current;
+        }
+
+        if (currentDraw === 0) {
+            aNeedle.style.transform = "rotate(-55deg)";
+        } else {
+            aNeedle.style.transform = `rotate(${-55 + (currentDraw * 0.1833)}deg)`;
+        }
+    }
+
+    function updateAllMeters() {
+        updatePanelMeters('inc'); updatePanelMeters('og1'); updatePanelMeters('og2');
+    }
+
+    /* ADD THIS inside <script> */
+
+function remoteOperate(pId) {
+
+    const p = panels[pId];
+
+    if (!p.remoteMode) {
+        alert(`⚠️ ${pId.toUpperCase()} is in MANUAL mode. Put selector to REMOTE.`);
+        return;
+    }
+
+    if (p.state === 1) {
+        executeTrippingSequence(pId);
+    } else {
+        executeClosingSequence(pId);
+    }
+
+    syncSLD();
+}
+
+/* ADD THIS inside <script> */
+
+function remoteOperate(pId) {
+
+    const p = panels[pId];
+
+    if (!p.remoteMode) {
+        alert(`⚠️ ${pId.toUpperCase()} is in MANUAL mode. Put selector to REMOTE.`);
+        return;
+    }
+
+    if (p.state === 1) {
+        executeTrippingSequence(pId);
+    } else {
+        executeClosingSequence(pId);
+    }
+
+    syncSLD();
+}
+
+function handleSldCbClick(pId) {
+        const p = panels[pId];
+        if (!p.remoteMode) {
+            alert(`🔒 SCADA LOCAL BLOCKED: Shift the physical "SELECT SW (REM/MAN)" handle to Remote (R) mode on the cubicle panel surface first to authorize remote SCADA control.`);
+            return;
+        }
+        
+        if (p.state === 1) {
+            executeTrippingSequence(pId);
+        } else {
+            executeClosingSequence(pId);
+        }
+    }
+
+function updateSldGraphics() {
+        const isGridLive = !gridLineDead;
+        toggleSldClass('sld-line-grid', 'live', isGridLive);
+        toggleSldClass('sld-node-grid', 'live', isGridLive);
+
+        updateSldCbBox('inc');
+        updateSldCbBox('og1');
+        updateSldCbBox('og2');
+
+        toggleSldClass('sld-line-to-bus', 'live', isGridLive && panels.inc.state === 1);
+        toggleSldClass('sld-line-busbar', 'live', busbarLive);
+
+        const og1Live = busbarLive && (panels.og1.state === 1);
+        toggleSldClass('sld-line-og1-top', 'live', busbarLive);
+        toggleSldClass('sld-line-og1-bot', 'live', og1Live);
+        toggleSldClass('sld-node-og1', 'live', og1Live);
+
+        const og2Live = busbarLive && (panels.og2.state === 1);
+        toggleSldClass('sld-line-og2-top', 'live', busbarLive);
+        toggleSldClass('sld-line-og2-bot', 'live', og2Live);
+        toggleSldClass('sld-node-og2', 'live', og2Live);
+    }
+
+    function updateSldCbBox(pId) {
+        const p = panels[pId];
+        const cbBox = document.getElementById(`sld-cb-${pId}`);
+        
+        cbBox.setAttribute('class', 'sld-cb-box');
+
+        if (p.state === 1) {
+            cbBox.classList.add('closed');
+        } else if (p.state === 2) {
+            cbBox.classList.add('tripped');
+        } else {
+            cbBox.classList.add('open');
+        }
+    }
+
+    function toggleSldClass(elementId, className, condition) {
+        const element = document.getElementById(elementId);
+        if (condition) {
+            element.classList.add(className);
+        } else {
+            element.classList.remove(className);
+        }
+    }
+
+function syncSLD() {
+
+    ['inc','og1','og2'].forEach(pId => {
+
+        const cb = document.getElementById(`sld-${pId}-cb`);
+        if (!cb) return;
+
+        if (panels[pId].state === 1) {
+            cb.setAttribute('fill', '#ff3b30');
+        } else if (panels[pId].state === 2) {
+            cb.setAttribute('fill', '#ffcc00');
+        } else {
+            cb.setAttribute('fill', '#34c759');
+        }
+    });
+}
+
+    window.onload = function() {
+        updateGridLiveLEDs(); recalculateBusbarPower(); updateAllMeters(); updateAllAnnunciators(); updateSldGraphics();
+    };
+</script>
+</body>
+</html>
