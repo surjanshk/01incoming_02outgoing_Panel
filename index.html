@@ -1122,7 +1122,7 @@
         document.getElementById(`${pId}-ann-cbon`).className = p.state === 1 ? "annunciator-window active-cb-on" : "annunciator-window";
         document.getElementById(`${pId}-ann-cboff`).className = p.state !== 1 ? "annunciator-window active-cb-off" : "annunciator-window";
         document.getElementById(`${pId}-ann-spr`).className = (lockout86Active && p.faulted) ? "annunciator-window" : "annunciator-window active-spr";
-        document.getElementById(`${pId}-ann-tch`).className = (pId === 'inc' && gridLineDead) ? "annunciator-window" : "annunciator-window active-tch";
+        document.getElementById(`${pId}-ann-tch`).className = (p.faulted || (pId === 'inc' && gridLineDead)) ? "annunciator-window" : "annunciator-window active-tch";
         
         const ocWin = document.getElementById(`${pId}-ann-oc`);
         const efWin = document.getElementById(`${pId}-ann-ef`);
